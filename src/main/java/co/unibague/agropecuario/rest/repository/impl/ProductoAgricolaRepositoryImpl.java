@@ -10,6 +10,7 @@ import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.stream.Collectors;
 
 @Repository
 public class ProductoAgricolaRepositoryImpl implements ProductoAgricolaRepository {
@@ -96,14 +97,14 @@ public class ProductoAgricolaRepositoryImpl implements ProductoAgricolaRepositor
     public List<ProductoAgricola> findByTipoCultivo(String tipo) {
         return productos.values().stream()
                 .filter(p -> p.getTipoCultivo().toLowerCase().contains(tipo.toLowerCase()))
-                .toList();
+                .collect(Collectors.toList()); // Corregido: usar collect en lugar de toList()
     }
 
     @Override
     public List<ProductoAgricola> findByNombreContaining(String nombre) {
         return productos.values().stream()
                 .filter(p -> p.getNombre().toLowerCase().contains(nombre.toLowerCase()))
-                .toList();
+                .collect(Collectors.toList()); // Corregido
     }
 
     @Override
@@ -111,7 +112,7 @@ public class ProductoAgricolaRepositoryImpl implements ProductoAgricolaRepositor
         return productos.values().stream()
                 .filter(p -> p.getTemporada() != null &&
                         p.getTemporada().toLowerCase().contains(temporada.toLowerCase()))
-                .toList();
+                .collect(Collectors.toList()); // Corregido
     }
 
     @Override
@@ -124,7 +125,7 @@ public class ProductoAgricolaRepositoryImpl implements ProductoAgricolaRepositor
                     boolean cumpleMax = maxHectareas == null || hectareas <= maxHectareas;
                     return cumpleMin && cumpleMax;
                 })
-                .toList();
+                .collect(Collectors.toList()); // Corregido
     }
 
     @Override

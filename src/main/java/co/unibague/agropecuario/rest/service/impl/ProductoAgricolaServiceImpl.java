@@ -23,9 +23,14 @@ public class ProductoAgricolaServiceImpl implements ProductoAgricolaService {
         // Validar datos del producto
         validarProducto(producto);
 
-        // Verificar si ya existe un producto con el mismo ID
-        if (producto.getId() != null && repository.existsById(producto.getId())) {
-            throw new ProductoAlreadyExistsException("Ya existe un producto con el ID: " + producto.getId());
+        // Si no tiene ID o está vacío, generar uno nuevo
+        if (producto.getId() == null || producto.getId().trim().isEmpty()) {
+            producto.setId(repository.generateNextId());
+        } else {
+            // Si tiene ID, verificar que no exista
+            if (repository.existsById(producto.getId())) {
+                throw new ProductoAlreadyExistsException("Ya existe un producto con el ID: " + producto.getId());
+            }
         }
 
         return repository.save(producto);

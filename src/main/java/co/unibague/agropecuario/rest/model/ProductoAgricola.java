@@ -8,8 +8,8 @@ import java.util.Objects;
 
 public class ProductoAgricola {
 
-    @NotBlank(message = "El ID es obligatorio")
-    @Size(min = 3, max = 10, message = "El ID debe tener entre 3 y 10 caracteres")
+    // ID opcional para creación - se genera automáticamente si no se proporciona
+    @Size(max = 10, message = "El ID no puede exceder 10 caracteres")
     private String id;
 
     @NotBlank(message = "El nombre es obligatorio")
@@ -28,7 +28,6 @@ public class ProductoAgricola {
     @JsonProperty("cantidadProducida")
     private Integer cantidadProducida;
 
-    @NotNull(message = "La fecha de producción es obligatoria")
     @JsonFormat(pattern = "yyyy-MM-dd'T'HH:mm:ss")
     @JsonProperty("fechaProduccion")
     private LocalDateTime fechaProduccion;

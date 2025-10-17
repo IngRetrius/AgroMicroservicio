@@ -1,6 +1,7 @@
 package co.unibague.agropecuario.rest.controller;
 
 import co.unibague.agropecuario.rest.dto.ErrorResponseDTO;
+import co.unibague.agropecuario.rest.exception.CosechaNotFoundException;
 import co.unibague.agropecuario.rest.exception.ProductoAlreadyExistsException;
 import co.unibague.agropecuario.rest.exception.ProductoNotFoundException;
 import co.unibague.agropecuario.rest.exception.ValidationException;
@@ -15,6 +16,10 @@ import org.springframework.web.context.request.WebRequest;
 import java.util.ArrayList;
 import java.util.List;
 
+/**
+ * Manejador global de excepciones
+ * Universidad de Ibagué - Desarrollo de Aplicaciones Empresariales
+ */
 @ControllerAdvice
 public class GlobalExceptionHandler {
 
@@ -23,6 +28,17 @@ public class GlobalExceptionHandler {
             ProductoNotFoundException ex, WebRequest request) {
         ErrorResponseDTO error = new ErrorResponseDTO(
                 "PRODUCTO_NOT_FOUND",
+                ex.getMessage(),
+                request.getDescription(false).replace("uri=", "")
+        );
+        return ResponseEntity.status(HttpStatus.NOT_FOUND).body(error);
+    }
+
+    @ExceptionHandler(CosechaNotFoundException.class)
+    public ResponseEntity<ErrorResponseDTO> handleCosechaNotFound(
+            CosechaNotFoundException ex, WebRequest request) {
+        ErrorResponseDTO error = new ErrorResponseDTO(
+                "COSECHA_NOT_FOUND",
                 ex.getMessage(),
                 request.getDescription(false).replace("uri=", "")
         );

@@ -1,54 +1,77 @@
 package co.unibague.agropecuario.rest.model;
 
 import com.fasterxml.jackson.annotation.JsonFormat;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import jakarta.persistence.*;
 import jakarta.validation.constraints.*;
 import java.time.LocalDateTime;
 import java.time.temporal.ChronoUnit;
 import java.util.Objects;
 
 /**
- * Modelo de Cosecha - Detalle de ProductoAgricola
+ * Entidad JPA Cosecha - Detalle de ProductoAgricola
  * Relación: ProductoAgricola (1) ---> (0..*) Cosecha
  * Universidad de Ibagué - Desarrollo de Aplicaciones Empresariales
+ * Tercer Prototipo - Persistencia con MySQL
  */
+@Entity
+@Table(name = "cosecha")
 public class Cosecha {
 
+    @Id
+    @Column(name = "id", length = 10, nullable = false)
     @Size(max = 10, message = "El ID no puede exceder 10 caracteres")
     private String id;
 
+    // Relación Many-to-One con ProductoAgricola (sin usar listas)
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "producto_id", nullable = false, foreignKey = @ForeignKey(name = "fk_cosecha_producto"))
+    @JsonIgnore
+    private ProductoAgricola producto;
+
+    // Campo para compatibilidad con API REST (setter/getter manual)
+    @Transient
     @NotBlank(message = "El ID del producto es obligatorio")
     @JsonProperty("productoId")
-    private String productoId; // ⚠️ FK a ProductoAgricola
+    private String productoId;
 
+    @Column(name = "fecha_cosecha", nullable = false)
     @NotNull(message = "La fecha de cosecha es obligatoria")
     @JsonFormat(pattern = "yyyy-MM-dd'T'HH:mm:ss")
     @JsonProperty("fechaCosecha")
     private LocalDateTime fechaCosecha;
 
+    @Column(name = "cantidad_recolectada", nullable = false)
     @NotNull(message = "La cantidad recolectada es obligatoria")
     @Min(value = 1, message = "La cantidad debe ser mayor a 0")
     @JsonProperty("cantidadRecolectada")
     private Integer cantidadRecolectada; // en kg
 
+    @Column(name = "calidad_producto", length = 30, nullable = false)
     @NotBlank(message = "La calidad del producto es obligatoria")
     @JsonProperty("calidadProducto")
     private String calidadProducto; // Premium, Extra, Estándar, Segunda
 
+    @Column(name = "numero_trabajadores")
     @Min(value = 1, message = "El número de trabajadores debe ser mayor a 0")
     @JsonProperty("numeroTrabajadores")
     private Integer numeroTrabajadores;
 
+    @Column(name = "costo_mano_obra")
     @DecimalMin(value = "0.0", message = "El costo debe ser mayor o igual a 0")
     @JsonProperty("costoManoObra")
     private Double costoManoObra;
 
+    @Column(name = "condiciones_climaticas", length = 50)
     @JsonProperty("condicionesClimaticas")
     private String condicionesClimaticas; // Soleado, Lluvioso, Nublado, etc.
 
+    @Column(name = "estado_cosecha", length = 30)
     @JsonProperty("estadoCosecha")
     private String estadoCosecha; // Completada, En proceso, Pendiente
 
+    @Column(name = "observaciones", length = 500)
     @JsonProperty("observaciones")
     private String observaciones;
 
@@ -158,12 +181,29 @@ public class Cosecha {
         this.id = id;
     }
 
+    // Getter para productoId (obtiene el ID del producto relacionado)
     public String getProductoId() {
+        if (producto != null) {
+            return producto.getId();
+        }
         return productoId;
     }
 
+    // Setter para productoId (almacena temporalmente, se debe sincronizar con producto)
     public void setProductoId(String productoId) {
         this.productoId = productoId;
+    }
+
+    // Getter/Setter para la entidad ProductoAgricola
+    public ProductoAgricola getProducto() {
+        return producto;
+    }
+
+    public void setProducto(ProductoAgricola producto) {
+        this.producto = producto;
+        if (producto != null) {
+            this.productoId = producto.getId();
+        }
     }
 
     public LocalDateTime getFechaCosecha() {

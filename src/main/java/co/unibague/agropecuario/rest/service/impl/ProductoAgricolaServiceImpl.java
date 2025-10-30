@@ -3,20 +3,30 @@ package co.unibague.agropecuario.rest.service.impl;
 import co.unibague.agropecuario.rest.exception.ProductoAlreadyExistsException;
 import co.unibague.agropecuario.rest.exception.ProductoNotFoundException;
 import co.unibague.agropecuario.rest.model.ProductoAgricola;
-import co.unibague.agropecuario.rest.repository.ProductoAgricolaRepository;
+import co.unibague.agropecuario.rest.repository.ProductoAgricolaJpaRepository;
+import co.unibague.agropecuario.rest.service.IdGeneratorService;
 import co.unibague.agropecuario.rest.service.ProductoAgricolaService;
 import co.unibague.agropecuario.rest.utils.Validador;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 import java.util.Optional;
 
+/**
+ * Servicio para ProductoAgricola usando JPA/Hibernate
+ * Universidad de Ibagué - Tercer Prototipo
+ */
 @Service
+@Transactional
 public class ProductoAgricolaServiceImpl implements ProductoAgricolaService {
 
     @Autowired
-    private ProductoAgricolaRepository repository;
+    private ProductoAgricolaJpaRepository repository;
+
+    @Autowired
+    private IdGeneratorService idGenerator;
 
     @Override
     public ProductoAgricola crearProducto(ProductoAgricola producto) {
@@ -25,7 +35,7 @@ public class ProductoAgricolaServiceImpl implements ProductoAgricolaService {
 
         // Si no tiene ID o está vacío, generar uno nuevo
         if (producto.getId() == null || producto.getId().trim().isEmpty()) {
-            producto.setId(repository.generateNextId());
+            producto.setId(idGenerator.generateNextProductoId());
         } else {
             // Si tiene ID, verificar que no exista
             if (repository.existsById(producto.getId())) {
@@ -59,7 +69,7 @@ public class ProductoAgricolaServiceImpl implements ProductoAgricolaService {
         if (nombre == null || nombre.trim().isEmpty()) {
             throw new IllegalArgumentException("El nombre no puede estar vacío");
         }
-        return repository.findByNombreContaining(nombre);
+        return repository.buscarPorNombreContiene(nombre);
     }
 
     @Override
@@ -67,7 +77,10 @@ public class ProductoAgricolaServiceImpl implements ProductoAgricolaService {
         if (temporada == null || temporada.trim().isEmpty()) {
             throw new IllegalArgumentException("La temporada no puede estar vacía");
         }
-        return repository.findByTemporada(temporada);
+        // JPA no tiene método automático para temporada, usar findAll y filtrar
+        return repository.findAll().stream()
+                .filter(p -> temporada.equals(p.getTemporada()))
+                .toList();
     }
 
     @Override
@@ -75,7 +88,11 @@ public class ProductoAgricolaServiceImpl implements ProductoAgricolaService {
         if (minHectareas != null && maxHectareas != null && minHectareas > maxHectareas) {
             throw new IllegalArgumentException("El mínimo de hectáreas no puede ser mayor al máximo");
         }
-        return repository.findByHectareasRange(minHectareas, maxHectareas);
+
+        if (minHectareas == null) minHectareas = 0.0;
+        if (maxHectareas == null) maxHectareas = Double.MAX_VALUE;
+
+        return repository.findByHectareasCultivadasBetween(minHectareas, maxHectareas);
     }
 
     @Override
@@ -90,7 +107,7 @@ public class ProductoAgricolaServiceImpl implements ProductoAgricolaService {
         // Validar datos del producto
         validarProducto(producto);
 
-        return repository.update(producto);
+        return repository.save(producto);
     }
 
     @Override
@@ -98,7 +115,8 @@ public class ProductoAgricolaServiceImpl implements ProductoAgricolaService {
         if (!repository.existsById(id)) {
             throw new ProductoNotFoundException("Producto no encontrado con ID: " + id);
         }
-        return repository.deleteById(id);
+        repository.deleteById(id);
+        return true;
     }
 
     @Override
@@ -108,7 +126,7 @@ public class ProductoAgricolaServiceImpl implements ProductoAgricolaService {
 
     @Override
     public int contarProductos() {
-        return repository.count();
+        return (int) repository.count();
     }
 
     private void validarProducto(ProductoAgricola producto) {

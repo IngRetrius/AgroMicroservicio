@@ -2,59 +2,79 @@ package co.unibague.agropecuario.rest.model;
 
 import com.fasterxml.jackson.annotation.JsonFormat;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import jakarta.persistence.*;
 import jakarta.validation.constraints.*;
 import java.time.LocalDateTime;
 import java.util.Objects;
 
+/**
+ * Entidad JPA ProductoAgricola - Maestro
+ * Universidad de Ibagué - Desarrollo de Aplicaciones Empresariales
+ * Tercer Prototipo - Persistencia con MySQL
+ */
+@Entity
+@Table(name = "producto_agricola")
 public class ProductoAgricola {
 
-    // ID opcional para creación - se genera automáticamente si no se proporciona
+    @Id
+    @Column(name = "id", length = 10, nullable = false)
     @Size(max = 10, message = "El ID no puede exceder 10 caracteres")
     private String id;
 
+    @Column(name = "nombre", length = 100, nullable = false)
     @NotBlank(message = "El nombre es obligatorio")
     @Size(min = 2, max = 100, message = "El nombre debe tener entre 2 y 100 caracteres")
     private String nombre;
 
+    @Column(name = "hectareas_cultivadas", nullable = false)
     @NotNull(message = "Las hectáreas cultivadas son obligatorias")
     @DecimalMin(value = "0.1", message = "Las hectáreas deben ser mayor a 0.1")
     @DecimalMax(value = "10000.0", message = "Las hectáreas no pueden exceder 10,000")
     @JsonProperty("hectareasCultivadas")
     private Double hectareasCultivadas;
 
+    @Column(name = "cantidad_producida", nullable = false)
     @NotNull(message = "La cantidad producida es obligatoria")
     @Min(value = 1, message = "La cantidad producida debe ser mayor a 0")
     @Max(value = 1000000, message = "La cantidad producida no puede exceder 1,000,000")
     @JsonProperty("cantidadProducida")
     private Integer cantidadProducida;
 
+    @Column(name = "fecha_produccion")
     @JsonFormat(pattern = "yyyy-MM-dd'T'HH:mm:ss")
     @JsonProperty("fechaProduccion")
     private LocalDateTime fechaProduccion;
 
+    @Column(name = "tipo_cultivo", length = 50, nullable = false)
     @NotBlank(message = "El tipo de cultivo es obligatorio")
     @JsonProperty("tipoCultivo")
     private String tipoCultivo;
 
+    @Column(name = "precio_venta", nullable = false)
     @NotNull(message = "El precio de venta es obligatorio")
     @DecimalMin(value = "100.0", message = "El precio debe ser mayor a $100")
     @DecimalMax(value = "1000000.0", message = "El precio no puede exceder $1,000,000")
     @JsonProperty("precioVenta")
     private Double precioVenta;
 
+    @Column(name = "costo_produccion", nullable = false)
     @NotNull(message = "El costo de producción es obligatorio")
     @DecimalMin(value = "100.0", message = "El costo debe ser mayor a $100")
     @JsonProperty("costoProduccion")
     private Double costoProduccion;
 
+    @Column(name = "rendimiento_por_ha")
     @JsonProperty("rendimientoPorHa")
     private Double rendimientoPorHa;
 
+    @Column(name = "temporada", length = 50)
     private String temporada;
 
+    @Column(name = "tipo_suelo", length = 50)
     @JsonProperty("tipoSuelo")
     private String tipoSuelo;
 
+    @Column(name = "codigo_finca", length = 20)
     @JsonProperty("codigoFinca")
     private String codigoFinca;
 

@@ -4,43 +4,54 @@ import co.unibague.agropecuario.rest.exception.CosechaNotFoundException;
 import co.unibague.agropecuario.rest.exception.ProductoNotFoundException;
 import co.unibague.agropecuario.rest.exception.ValidationException;
 import co.unibague.agropecuario.rest.model.Cosecha;
-import co.unibague.agropecuario.rest.repository.CosechaRepository;
-import co.unibague.agropecuario.rest.repository.ProductoAgricolaRepository;
+import co.unibague.agropecuario.rest.model.ProductoAgricola;
+import co.unibague.agropecuario.rest.repository.CosechaJpaRepository;
+import co.unibague.agropecuario.rest.repository.ProductoAgricolaJpaRepository;
 import co.unibague.agropecuario.rest.service.CosechaService;
+import co.unibague.agropecuario.rest.service.IdGeneratorService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.util.*;
 import java.util.stream.Collectors;
 
 /**
- * Implementación del servicio de Cosechas
+ * Implementación del servicio de Cosechas usando JPA/Hibernate
+ * Universidad de Ibagué - Tercer Prototipo
  */
 @Service
+@Transactional
 public class CosechaServiceImpl implements CosechaService {
 
     @Autowired
-    private CosechaRepository cosechaRepository;
+    private CosechaJpaRepository cosechaRepository;
 
     @Autowired
-    private ProductoAgricolaRepository productoRepository;
+    private ProductoAgricolaJpaRepository productoRepository;
+
+    @Autowired
+    private IdGeneratorService idGenerator;
 
     @Override
     public Cosecha crearCosecha(Cosecha cosecha) {
         // Validar datos de la cosecha
         validarCosecha(cosecha);
 
-        // Validar que el producto exista (integridad referencial)
-        if (!productoRepository.existsById(cosecha.getProductoId())) {
-            throw new ProductoNotFoundException(
-                    "No se puede crear la cosecha. El producto con ID '" +
-                            cosecha.getProductoId() + "' no existe");
-        }
+        // Obtener el producto y establecer la relación
+        String productoId = cosecha.getProductoId();
+        ProductoAgricola producto = productoRepository.findById(productoId)
+                .orElseThrow(() -> new ProductoNotFoundException(
+                        "No se puede crear la cosecha. El producto con ID '" +
+                                productoId + "' no existe"));
+
+        // Establecer la relación @ManyToOne
+        cosecha.setProducto(producto);
 
         // Generar ID si no lo tiene
         if (cosecha.getId() == null || cosecha.getId().trim().isEmpty()) {
-            cosecha.setId(cosechaRepository.generateNextId());
+            cosecha.setId(idGenerator.generateNextCosechaId());
         }
 
         // Establecer valores por defecto
@@ -76,7 +87,7 @@ public class CosechaServiceImpl implements CosechaService {
                     "El producto con ID '" + productoId + "' no existe");
         }
 
-        return cosechaRepository.findByProductoId(productoId);
+        return cosechaRepository.findCosechasByProductoId(productoId);
     }
 
     @Override
@@ -84,7 +95,7 @@ public class CosechaServiceImpl implements CosechaService {
         if (calidad == null || calidad.trim().isEmpty()) {
             throw new IllegalArgumentException("La calidad no puede estar vacía");
         }
-        return cosechaRepository.findByCalidad(calidad);
+        return cosechaRepository.findByCalidadProducto(calidad);
     }
 
     @Override
@@ -92,7 +103,7 @@ public class CosechaServiceImpl implements CosechaService {
         if (estado == null || estado.trim().isEmpty()) {
             throw new IllegalArgumentException("El estado no puede estar vacío");
         }
-        return cosechaRepository.findByEstado(estado);
+        return cosechaRepository.findByEstadoCosecha(estado);
     }
 
     @Override
@@ -101,7 +112,11 @@ public class CosechaServiceImpl implements CosechaService {
             throw new IllegalArgumentException(
                     "La fecha de inicio no puede ser posterior a la fecha de fin");
         }
-        return cosechaRepository.findByFechaRange(inicio, fin);
+
+        if (inicio == null) inicio = LocalDateTime.of(2000, 1, 1, 0, 0);
+        if (fin == null) fin = LocalDateTime.now();
+
+        return cosechaRepository.findByFechaCosechaBetween(inicio, fin);
     }
 
     @Override
@@ -117,14 +132,17 @@ public class CosechaServiceImpl implements CosechaService {
         // Validar datos
         validarCosecha(cosecha);
 
-        // Validar que el producto exista
-        if (!productoRepository.existsById(cosecha.getProductoId())) {
-            throw new ProductoNotFoundException(
-                    "No se puede actualizar la cosecha. El producto con ID '" +
-                            cosecha.getProductoId() + "' no existe");
-        }
+        // Obtener el producto y establecer la relación
+        String productoId = cosecha.getProductoId();
+        ProductoAgricola producto = productoRepository.findById(productoId)
+                .orElseThrow(() -> new ProductoNotFoundException(
+                        "No se puede actualizar la cosecha. El producto con ID '" +
+                                productoId + "' no existe"));
 
-        return cosechaRepository.update(cosecha);
+        // Establecer la relación @ManyToOne
+        cosecha.setProducto(producto);
+
+        return cosechaRepository.save(cosecha);
     }
 
     @Override
@@ -132,7 +150,8 @@ public class CosechaServiceImpl implements CosechaService {
         if (!cosechaRepository.existsById(id)) {
             throw new CosechaNotFoundException("Cosecha no encontrada con ID: " + id);
         }
-        return cosechaRepository.deleteById(id);
+        cosechaRepository.deleteById(id);
+        return true;
     }
 
     @Override
@@ -142,7 +161,7 @@ public class CosechaServiceImpl implements CosechaService {
 
     @Override
     public int contarCosechas() {
-        return cosechaRepository.count();
+        return (int) cosechaRepository.count();
     }
 
     @Override
@@ -150,7 +169,14 @@ public class CosechaServiceImpl implements CosechaService {
         if (productoId == null || productoId.trim().isEmpty()) {
             throw new IllegalArgumentException("El ID del producto no puede estar vacío");
         }
-        return cosechaRepository.countByProductoId(productoId);
+
+        // Obtener el producto y contar sus cosechas
+        ProductoAgricola producto = productoRepository.findById(productoId)
+                .orElseThrow(() -> new ProductoNotFoundException(
+                        "El producto con ID '" + productoId + "' no existe"));
+
+        Long count = cosechaRepository.countByProducto(producto);
+        return count != null ? count.intValue() : 0;
     }
 
     @Override
@@ -158,7 +184,11 @@ public class CosechaServiceImpl implements CosechaService {
         if (productoId == null || productoId.trim().isEmpty()) {
             throw new IllegalArgumentException("El ID del producto no puede estar vacío");
         }
-        return cosechaRepository.deleteByProductoId(productoId);
+
+        // Obtener las cosechas del producto y eliminarlas
+        List<Cosecha> cosechas = cosechaRepository.findCosechasByProductoId(productoId);
+        cosechaRepository.deleteAll(cosechas);
+        return cosechas.size();
     }
 
     @Override

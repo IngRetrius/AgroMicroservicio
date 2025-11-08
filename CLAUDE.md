@@ -10,9 +10,10 @@ Spring Boot REST API for managing agricultural products (ProductoAgricola) and t
 - Java 21
 - Spring Boot 3.2.0
 - Maven
-- In-memory storage (ConcurrentHashMap)
+- MySQL Database with JPA/Hibernate
 - Jackson for JSON serialization
 - Bean Validation (Jakarta)
+- Properties-based configuration (centralized)
 
 ## Build and Run Commands
 
@@ -53,9 +54,23 @@ mvn clean package -Pprod
 ```
 
 ### Application Access
-- Server runs on: `http://localhost:8081`
+- Server runs on: `http://localhost:8081` (configurable in `application.properties`)
 - Health check: `http://localhost:8081/actuator/health`
 - Statistics: `http://localhost:8081/api/productos/estadisticas`
+
+### Configuration
+All application settings are centralized in `application.properties` files:
+- **`application.properties`** - Base configuration shared across all environments
+- **`application-dev.properties`** - Development-specific overrides
+- **`application-prod.properties`** - Production-specific overrides
+
+**Quick configuration changes:**
+- Change server port: Edit `server.port` in `application.properties`
+- Change database connection: Edit `spring.datasource.*` properties
+- Change CORS settings: Edit `cors.*` properties
+- Change logging levels: Edit `logging.level.*` properties
+
+See `CONFIGURATION.md` for complete configuration guide.
 
 ## Architecture
 
@@ -157,7 +172,12 @@ This happens in the constructor via `inicializarDatosPrueba()` method.
 
 ### Timezone Configuration
 
-All dates use Colombia timezone (`America/Bogota`) configured in `application.yml`. Jackson is configured to format dates as `yyyy-MM-dd'T'HH:mm:ss`.
+All dates use Colombia timezone (`America/Bogota`) configured in `application.properties`. Jackson is configured to format dates as `yyyy-MM-dd'T'HH:mm:ss`.
+
+**Configuration properties:**
+- `spring.jackson.time-zone=America/Bogota`
+- `spring.jackson.date-format=yyyy-MM-dd'T'HH:mm:ss`
+- `app.timezone=America/Bogota`
 
 ## Development Guidelines
 
@@ -195,18 +215,32 @@ All handled by `GlobalExceptionHandler` which returns standardized error respons
 
 ### CORS Configuration
 
-Configured in `WebConfig.java` to allow all origins, methods, and headers. This is for academic purposes only.
+Configured in `WebConfig.java` using externalized properties from `application.properties`. CORS settings can be easily modified in the properties file without changing code:
+- `cors.allowed-origins` - Allowed origins (comma-separated)
+- `cors.allowed-methods` - Allowed HTTP methods
+- `cors.allowed-headers` - Allowed request headers
+- `cors.allow-credentials` - Allow credentials (cookies, auth)
+- `cors.max-age` - Preflight cache duration
+
+Default settings allow all origins for academic purposes. Restrict in production.
 
 ## Key Files
 
+### Configuration Files
 - `pom.xml` - Maven dependencies and build configuration
-- `application.yml` - Application configuration (port 8081, timezone, logging)
+- `application.properties` - Main application configuration (centralized)
+- `application-dev.properties` - Development profile settings
+- `application-prod.properties` - Production profile settings
+- `CONFIGURATION.md` - Complete configuration guide
+
+### Java Source Files
 - `ProductoAgricolaController.java` - Main controller with nested cosecha routes
 - `CosechaController.java` - Direct cosecha operations
 - `GlobalExceptionHandler.java` - Centralized exception handling
 - `ResponseBuilder.java` - Utility for building standardized responses
 - `Validador.java` - Custom validation utilities
 - `Constantes.java` - Application constants
+- `WebConfig.java` - CORS configuration (reads from properties)
 
 ## Common Development Patterns
 
@@ -228,8 +262,10 @@ Use Spring's parameter-based routing pattern shown in existing controllers. This
 
 ## Important Notes
 
-- This project uses **in-memory storage** - all data is lost on restart
+- This project uses **MySQL database with JPA/Hibernate** for persistence
 - IDs are auto-generated and should not be provided in POST requests
-- The master-detail relationship is enforced at the service layer, not database level
-- Port 8081 must be available for the application to start
-- Timezone is hardcoded to America/Bogota for Colombia-specific operations
+- The master-detail relationship is enforced at the service layer and database level
+- **All configuration is centralized in `application.properties`** - change port, database, CORS, logging, etc. in one place
+- Port 8081 (dev) must be available for the application to start (configurable via `server.port`)
+- Timezone is configured in `application.properties` (`America/Bogota` for Colombia)
+- See `CONFIGURATION.md` for detailed configuration instructions
